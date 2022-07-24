@@ -12,6 +12,7 @@ router.post('/createuser', [
   body('email', 'enter a valid email').isEmail(),
   body('password', 'Password must be of length 5').isLength({ min: 5 })
 ], async (req, res) => {
+  let success = false;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -20,7 +21,7 @@ router.post('/createuser', [
 
     let user = await User.findOne({ email: req.body.email })
     if (user) {
-      return res.status(400).json({ error: "Sorry a user with this email already exists.." })
+      return res.status(400).json({ success, error: "Sorry a user with this email already exists.." })
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -36,7 +37,8 @@ router.post('/createuser', [
       }
     }
     const jwtData = jwt.sign(data, "param");
-    res.json({ jwtData });
+    success=true;
+    res.json({ success, jwtData });
   } catch (error) {
     console.log(error.message)
   }
@@ -45,6 +47,7 @@ router.post('/login', [
   body('email', 'enter a valid email').isEmail(),
   body('password', 'Password must be of length 5').isLength({ min: 5 })
 ], async (req, res) => {
+  let success = false
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -53,11 +56,13 @@ router.post('/login', [
   try {
     let user = await User.findOne({ email })
     if (!user) {
+      success = false
       return res.status(400).json({ error: "sorry user doesn't exists" });
     }
     const passwordCompare = await bcrypt.compare(password, user.password);
     if (!passwordCompare) {
-      return res.status(400).json({ error: "sorry user doesn't exists" });
+      success = false
+      return res.status(400).json({ success, error: "sorry user doesn't exists" });
     }
     const data = {
       user: {
@@ -65,7 +70,8 @@ router.post('/login', [
       }
     }
     const jwtData = jwt.sign(data, "param");
-    res.json({ jwtData });
+    success = true;
+    res.json({ success, jwtData });
   } catch (error) {
     console.log(error.message)
     res.status(500).send("Sorry, Some error occured");
